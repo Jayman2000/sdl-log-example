@@ -20,6 +20,8 @@ it makes sense for [the Descent 3 project][1] to replace [spdlog][2] with
 3. Make sure that you have the following prerequisites installed:
     - [CMake](https://cmake.org)
     - [SDL](https://libsdl.org)2
+    - [libsystemd](https://www.freedesktop.org/software/systemd/man/latest/libsystemd.html)
+    - [pkg-config](https://www.freedesktop.org/wiki/Software/pkg-config/)
 
     If you have [the Nix package manager](https://nix.dev) installed, then you
     can run `nix-shell` to start a shell with all of those prerequisites

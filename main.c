@@ -30,15 +30,17 @@ SDL_LogOutputFunction default_output_function;
 void *default_userdata;
 FILE *log_file;
 
-void log_with_location_implementation(const char *file, const char *line,
+void log_with_location_implementation(SDL_LogPriority priority,
+                                      const char *file, const char *line,
                                       const char *func, const char *message) {
-  SDL_Log("%s" LOG_PARAM_SEPARATOR "%s" LOG_PARAM_SEPARATOR
-          "%s" LOG_PARAM_SEPARATOR "%s",
-          file, line, func, message);
+  SDL_LogMessage(SDL_LOG_CATEGORY_APPLICATION, priority,
+                 "%s" LOG_PARAM_SEPARATOR "%s" LOG_PARAM_SEPARATOR
+                 "%s" LOG_PARAM_SEPARATOR "%s",
+                 file, line, func, message);
 }
 
-#define LogWithLocation(message)                                               \
-  log_with_location_implementation(__FILE__, TO_STRING(__LINE__),              \
+#define LogWithLocation(priority, message)                                     \
+  log_with_location_implementation(priority, __FILE__, TO_STRING(__LINE__),    \
                                    __FUNCTION__, message)
 
 int sdl_log_priority_to_syslog_priority(SDL_LogPriority priority) {
@@ -181,8 +183,10 @@ int main(void) {
   defaults_initialized = true;
   SDL_LogSetOutputFunction(CustomLogOutputFunction, NULL);
 
-  SDL_Log("Logging without line number.");
-  LogWithLocation("Logging with line number.");
+  for (SDL_LogPriority p = SDL_LOG_PRIORITY_VERBOSE; p < SDL_NUM_LOG_PRIORITIES; p++) {
+    SDL_LogMessage(SDL_LOG_CATEGORY_APPLICATION, p, "Logging without line number.");
+    LogWithLocation(p, "Logging with line number.");
+  }
 
   return 0;
 }

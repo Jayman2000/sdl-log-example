@@ -1,5 +1,15 @@
 # SDL Logging Example
 
+The code in this repo was written in order to help me evaluate whether or not
+it makes sense for [the Descent 3 project][1] to replace [spdlog][2] with
+[SDL’s logging API][3]. For more information, take a look at the comments on
+[this pull request][4].
+
+[1]: https://github.com/DescentDevelopers/Descent3
+[2]: https://github.com/gabime/spdlog
+[3]: https://wiki.libsdl.org/SDL2/SDL_Log
+[4]: https://github.com/DescentDevelopers/Descent3/pull/271
+
 ## How to run the code that’s in this repo
 
 1. Get a copy of this repo.

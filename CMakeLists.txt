@@ -7,5 +7,9 @@ project("SDL Logging Example")
 find_package(SDL2 REQUIRED)
 include_directories("${SDL2_INCLUDE_DIRS}")
 
+include(GNUInstallDirs)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(SYSTEMD REQUIRED IMPORTED_TARGET libsystemd)
+
 add_executable(sdl-log-example main.c)
-target_link_libraries(sdl-log-example SDL2)
+target_link_libraries(sdl-log-example SDL2 systemd)

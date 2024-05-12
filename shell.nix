@@ -3,8 +3,10 @@
 pkgs.mkShell {
   name = "shell-for-building-sdl-log-example";
   packages = with pkgs; [
-    cmake
     SDL2
+    cmake
+    pkg-config
+    systemd.dev
   ];
   hardeningDisable = [ "all" ];
 }

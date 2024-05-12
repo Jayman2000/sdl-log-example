@@ -28,6 +28,7 @@
 bool defaults_initialized = false;
 SDL_LogOutputFunction default_output_function;
 void *default_userdata;
+FILE *log_file;
 
 void log_with_location_implementation(const char *file, const char *line,
                                       const char *func, const char *message) {
@@ -71,6 +72,21 @@ char *create_sd_journal_argument(char *prefix, const char *full_message,
   return return_value;
 }
 
+void open_log(const char *mode) {
+  log_file = fopen("log.txt", mode);
+  if (log_file == NULL) {
+    fputs("Failed to open log.txt\n", stderr);
+    exit(1);
+  }
+}
+
+void close_log() {
+  if (fclose(log_file)) {
+    fputs("Failed to close log.txt\n", stderr);
+    exit(1);
+  }
+}
+
 void CustomLogOutputFunction(void *userdata, int category,
                              SDL_LogPriority priority, const char *message) {
   const size_t total_separators = 3;
@@ -111,6 +127,20 @@ void CustomLogOutputFunction(void *userdata, int category,
     free(file);
     free(line);
     free(func);
+
+    fprintf(
+        log_file,
+        "category=%i,priority=%i %.*s:%.*s in %.*s(): %s\n",
+        category,
+        priority,
+        separator_indexes[0],
+        message,
+        separator_indexes[1] - separator_indexes[0] - separator_length,
+        message + separator_indexes[0] + separator_length,
+        separator_indexes[2] - separator_indexes[1] - separator_length,
+        message + separator_indexes[1] + separator_length,
+        actual_message
+    );
   } else {
     actual_message = message;
     result = sd_journal_send(
@@ -118,6 +148,13 @@ void CustomLogOutputFunction(void *userdata, int category,
         "PRIORITY=%i", sdl_log_priority_to_syslog_priority(priority),
         "MESSAGE=%s", message,
         NULL
+    );
+    fprintf(
+        log_file,
+        "category=%i,priority=%i %s\n",
+        category,
+        priority,
+        actual_message
     );
   }
   if (result != 0) {
@@ -131,11 +168,21 @@ void CustomLogOutputFunction(void *userdata, int category,
 }
 
 int main(void) {
+  // Clear any previous logs.
+  open_log("w");
+  close_log();
+
+  open_log("a");
+  if (atexit(close_log) != 0) {
+    fputs("Failed to register close_log() as an atexit funtion.\n", stderr);
+    return 1;
+  }
   SDL_LogGetOutputFunction(&default_output_function, &default_userdata);
   defaults_initialized = true;
   SDL_LogSetOutputFunction(CustomLogOutputFunction, NULL);
 
   SDL_Log("Logging without line number.");
   LogWithLocation("Logging with line number.");
+
   return 0;
 }

@@ -2,7 +2,8 @@
 
 pkgs.mkShell {
   name = "shell-for-building-sdl-log-example";
-  packages = [
-    pkgs.cmake
+  packages = with pkgs; [
+    cmake
+    SDL2
   ];
 }

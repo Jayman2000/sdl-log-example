@@ -2,13 +2,17 @@
 
 ## How to run the code that’s in this repo
 
-1. Make sure that you have the following prerequisites installed:
-    - [CMake](https://cmake.org)
-2. Get a copy of this repo.
-3. Change directory into your local copy of this repo:
+1. Get a copy of this repo.
+2. Change directory into your local copy of this repo:
     ```
     cd <repo>
     ```
+3. Make sure that you have the following prerequisites installed:
+    - [CMake](https://cmake.org)
+
+    If you have [the Nix package manager](https://nix.dev) installed, then you
+    can run `nix-shell` to start a shell with all of those prerequisites
+    installed.
 4. Generate the project’s build system:
     ```
     cmake -B build

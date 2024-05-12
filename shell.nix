@@ -6,4 +6,5 @@ pkgs.mkShell {
     cmake
     SDL2
   ];
+  hardeningDisable = [ "all" ];
 }

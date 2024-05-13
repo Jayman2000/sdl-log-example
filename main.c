@@ -61,17 +61,14 @@ int sdl_log_priority_to_syslog_priority(SDL_LogPriority priority) {
   }
 }
 
-char *create_sd_journal_argument(char *prefix, const char *full_message,
-                                 size_t start, size_t end) {
-  size_t suffix_length = end - start;
-  size_t return_value_size = strlen(prefix) + suffix_length + 1;
-  char *return_value = malloc(return_value_size);
-  if (return_value == NULL) {
-    fputs("Failed to allocate memory for log message.\n", stderr);
+void create_sd_journal_argument(char *buffer, const char *prefix,
+                                const char *suffix) {
+  int result = sprintf(buffer, "%s%s", prefix, suffix);
+  if (result < 0) {
+    fputs("Failed to create argument for sd_journal_send_with_location().\n",
+          stderr);
     exit(1);
   }
-  sprintf(return_value, "%s%.*s", prefix, suffix_length, full_message + start);
-  return return_value;
 }
 
 void open_log(const char *mode) {
@@ -91,56 +88,46 @@ void close_log() {
 
 void CustomLogOutputFunction(void *userdata, int category,
                              SDL_LogPriority priority, const char *message) {
-  const size_t total_separators = 3;
-  size_t separator_indexes[total_separators];
-  size_t separator_length = strlen(LOG_PARAM_SEPARATOR);
+  const char sd_code_file[] = "CODE_FILE=";
+  const char sd_code_line[] = "CODE_LINE=";
+  size_t message_length = strlen(message);
 
-  size_t i = 0;
-  const char *current_position = message;
-  bool all_separators_found = true;
-  while (i < total_separators) {
-    char *new_position = strstr(current_position, LOG_PARAM_SEPARATOR);
-    if (new_position == NULL) {
-      all_separators_found = false;
-      break;
-    } else {
-      separator_indexes[i] = new_position - message;
-      current_position = new_position + separator_length;
-    }
-    i++;
-  }
+  char *file = malloc(message_length + 1);
+  char *line = malloc(message_length + 1);
+  char *func = malloc(message_length + 1);
+  size_t parameters_end;
+  int result = sscanf(message,
+                      "%[^" LOG_PARAM_SEPARATOR "]" LOG_PARAM_SEPARATOR
+                      "%[^" LOG_PARAM_SEPARATOR "]" LOG_PARAM_SEPARATOR
+                      "%[^" LOG_PARAM_SEPARATOR "]" LOG_PARAM_SEPARATOR "%zn",
+                      file, line, func, &parameters_end);
 
-  int result;
+  bool all_separators_found = result == 3;
   const char *actual_message;
   if (all_separators_found) {
-    actual_message = message + separator_indexes[2] + separator_length;
-    char *file = create_sd_journal_argument("CODE_FILE=", message, 0, separator_indexes[0]);
-    char *line = create_sd_journal_argument("CODE_LINE=", message, separator_indexes[0] + separator_length, separator_indexes[1]);
-    char *func = create_sd_journal_argument("", message, separator_indexes[1] + separator_length, separator_indexes[2]);
+    char file_arg[strlen(sd_code_file) + strlen(file) + 1];
+    create_sd_journal_argument(file_arg, sd_code_file, file);
+    char line_arg[strlen(sd_code_line) + strlen(line) + 1];
+    create_sd_journal_argument(line_arg, sd_code_line, line);
+    actual_message = message + parameters_end;
+
     result = sd_journal_send_with_location(
-        file,
-        line,
+        file_arg,
+        line_arg,
         func,
         "SDL_CATEGORY=%i", category,
         "PRIORITY=%i", sdl_log_priority_to_syslog_priority(priority),
         "MESSAGE=%s", actual_message,
         NULL
     );
-    free(file);
-    free(line);
-    free(func);
-
     fprintf(
         log_file,
-        "category=%i,priority=%i %.*s:%.*s in %.*s(): %s\n",
+        "category=%i,priority=%i %s:%s in %s(): %s\n",
         category,
         priority,
-        separator_indexes[0],
-        message,
-        separator_indexes[1] - separator_indexes[0] - separator_length,
-        message + separator_indexes[0] + separator_length,
-        separator_indexes[2] - separator_indexes[1] - separator_length,
-        message + separator_indexes[1] + separator_length,
+        file,
+        line,
+        func,
         actual_message
     );
   } else {
@@ -164,6 +151,9 @@ void CustomLogOutputFunction(void *userdata, int category,
             "Failed to write a message to systemd-journald. Error code: %i\n",
             result);
   }
+  free(file);
+  free(line);
+  free(func);
 
   assert(defaults_initialized);
   default_output_function(default_userdata, category, priority, actual_message);
